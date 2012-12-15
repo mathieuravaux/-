@@ -10,7 +10,7 @@ PUSHER_KEY = pusher_url.user
 PUSHER_SECRET = pusher_url.password
 PUSHER_APP_ID = pusher_url.path.split('/').last
 
-pusher_client = Pusher::Client.new({
+$pusher_client = Pusher::Client.new({
   app_id: PUSHER_APP_ID,
   key: PUSHER_KEY,
   secret: PUSHER_SECRET
@@ -46,7 +46,7 @@ CI_PASSWORD = ENV['CI_PASSWORD']
 CI_PROJECT  = ENV['CI_PROJECT']  || "PPS :: tests :: tests"
 
 def send_pusher_instruction(instruction, data=nil)
-  ap pusher_client.trigger(['instructions'], instruction, data || {})
+  ap $pusher_client.trigger(['instructions'], instruction, data || {})
 end
 
 def check_ci
