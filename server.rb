@@ -1,6 +1,7 @@
 require 'uri'
 require 'logger'
 
+$fire_state = nil
 Pusher.logger = Logger.new(STDOUT)
 
 
@@ -16,20 +17,34 @@ $pusher_client = Pusher::Client.new({
   secret: PUSHER_SECRET
 })
 
-
+  
 class Server < Sinatra::Base
 
   get "/" do
     "Traffic light, ready for command !"
   end
 
-  post "/status" do
-    "At your orders !"
+  post "/state" do
+    ap params
+    red =    parse_param_state params['red']
+    orange = parse_param_state params['orange']
+    green =  parse_param_state params['green']
+    
+    state = {red: red, orange: orange, green: green}
+
+    state = [
+      red == 'on' ? 'y': 'n',
+      orange == 'on' ? 'y': 'n',
+      green == 'on' ? 'y': 'n'
+    ].join('')
+    ap state
+    result = send_pusher_instruction 'state', state
+    "State updated ! (#{result.inspect})"
   end
 
   post "/instructions" do
     puts params.inspect
-    instruction = params[:instruction] || params['instruction']
+    instruction = params['instruction']
     result = send_pusher_instruction instruction
     "Instruction #{instruction.inspect} sent to Pusher with result #{result.inspect}"
   end
@@ -37,6 +52,15 @@ class Server < Sinatra::Base
   post "/pusher_hooks" do
     puts params.inspect
     "OK !"
+  end
+  
+  def parse_param_state(param)
+    case param
+    when 'on' then 'on'
+    when 'off' then 'off'
+    when 'blinking' then 'blinking'
+    else 'off'
+    end
   end
 end
 
@@ -49,36 +73,58 @@ def send_pusher_instruction(instruction, data=nil)
   ap $pusher_client.trigger(['instructions'], instruction, data || {})
 end
 
+def send_lights_state(red, orange, green)
+  state = [red, orange, green].map { |s| s == "on" || s == true ? 'y' : 'n' }.join("")
+  
+  return if $fire_state == state
+  
+  puts "Sending state #{state}"
+  send_pusher_instruction('state', state)
+  $fire_state = state
+  puts "Done."
+end
+
 def check_ci
   puts "Getting CI status..."
   res = HTTParty.get(CI_URL, :basic_auth => {:username => CI_USERNAME, :password => CI_PASSWORD})
-  puts res
+  # puts res
   xml = MultiXml.parse res
-  ap xml
+  # ap xml
   
   project = (xml && xml['Projects'] && xml['Projects']['Project'] || []).detect { |p| p['name'] == CI_PROJECT }
   ap project
   
   activity = project['activity']
   last_status = project['lastBuildStatus']
+  ap [activity, last_status]
   
   orange = activity != "Sleeping"
   red = last_status != 'Success'
   green = last_status == 'Success'
+  ap [red, orange, green]
   
-  send_pusher_instruction(state, {red: red, orange: orange, green: green})
+  send_lights_state(red, orange, green)
 end
+
+STATES = %w(on off) #blinking
 
 Thread.new do
   puts "CI polling / Pusher thread created."
   
   loop do
-    # instruction = %w(red_on orange_on green_on red_off orange_off green_off).sample
-    # puts "Sending instruction #{instruction.inspect} to Pusher..."
-    # send_pusher_instruction instruction
-    # check_ci
-    sleep(5)
+    begin
+      # instruction = %w(red_on orange_on green_on red_off orange_off green_off).sample
+      # puts "Sending instruction #{instruction.inspect} to Pusher..."
+      # send_pusher_instruction instruction
+
+      # send_lights_state(STATES.sample, STATES.sample, STATES.sample)
+
+      check_ci
+      sleep(2)
+    rescue => e
+      ap e
+      ap e.backtrace
+    end
   end
-  
   
 end
