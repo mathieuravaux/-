@@ -7,4 +7,9 @@ class Server < Sinatra::Base
   post "/status" do
     "At your orders !"
   end
+  
+  post "/pusher_hooks" do
+    puts params.inspect
+    "OK !"
+  end
 end
