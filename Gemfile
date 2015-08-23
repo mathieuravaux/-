@@ -1,5 +1,7 @@
 source :rubygems
 
+ruby "2.2.2"
+
 gem 'activesupport', :require => "active_support"
 
 gem "pry"
