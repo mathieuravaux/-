@@ -106,9 +106,9 @@ def check_ci
 
   case
   when status == "running" then FireState.new.orange!
-  when FAILURE_OUTCOMES.include?(outcome) then Firestate.new.red!
-  when SUCCESS_OUTCOMES.include?(outcome) then Firestate.new.green!
-  else Firestate.new.set(red: true, green: true)
+  when FAILURE_OUTCOMES.include?(outcome) then FireState.new.red!
+  when SUCCESS_OUTCOMES.include?(outcome) then FireState.new.green!
+  else FireState.new.set(red: true, green: true)
   end
 end
 
