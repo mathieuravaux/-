@@ -42,12 +42,13 @@ class Server < Sinatra::Base
     state = {red: red, orange: orange, green: green}
 
     state = [
-      red == 'on' ? 'y': 'n',
-      orange == 'on' ? 'y': 'n',
-      green == 'on' ? 'y': 'n'
+      red == 'on' ? '1': '0',
+      orange == 'on' ? '1': '0',
+      green == 'on' ? '1': '0'
     ].join('')
     p state
     result = nil #send_pusher_instruction 'state', state
+    $fire_state = state
     "State updated ! (#{result.inspect})"
   end
 
