@@ -10,7 +10,12 @@ class FireState
   DEFAULT_STATE = '101'
 
   def get
+    return random if ENV['PARTY_MODE']
     $redis.get(REDIS_KEY) || DEFAULT_STATE
+  end
+
+  def random
+    3.times.map { %w(1 0).sample }.join('')
   end
 
   def set(red, orange, green)
@@ -35,7 +40,7 @@ class Server < Sinatra::Base
   end
 
   get "/state" do
-  	FireState.new.get
+    FireState.new.get
   end
 
   post "/state" do
@@ -49,6 +54,8 @@ class Server < Sinatra::Base
   def parse_param_state(param)
     case param
     when 'on' then true
+    when '1' then true
+    when 'true' then true
     else false
     end
   end
