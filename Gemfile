@@ -7,13 +7,7 @@ gem 'activesupport', :require => "active_support"
 gem "pry"
 
 gem 'redis'
-# gem 'pusher'
-
-# gem 'oj'
-# gem 'multi_json'
-
-# gem 'multi_xml'
-# gem 'httparty'
+gem 'httparty'
 
 # gem 'honeybadger'
 
