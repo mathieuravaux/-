@@ -73,7 +73,7 @@ end
 CI_REQ_HEADERS = {"Accept".freeze => "application/json".freeze}
 CI_TOKEN = ENV.fetch('CIRCLE_CI_AUTH_TOKEN')
 PROJECT = ENV.fetch('CIRCLE_CI_PROJECT')
-CI_URL="https://circleci.com/api/v1/project/#{PROJECT}?circle-token#{CI_TOKEN}=&limit=1"
+CI_URL="https://circleci.com/api/v1/project/#{PROJECT}?circle-token=#{CI_TOKEN}&limit=1"
 
 FAILURE_OUTCOMES = %w(
   canceled
