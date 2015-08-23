@@ -18,7 +18,7 @@ class FireState
     3.times.map { %w(1 0).sample }.join('')
   end
 
-  def set(red, orange, green)
+  def set(red: false, orange: false, green: false)
     state = [
       red     ? '1': '0',
       orange  ? '1': '0',
@@ -28,7 +28,16 @@ class FireState
     $redis.set(REDIS_KEY, state)
   end
 
-  def set_colors(red, orange, green)
+  def red!
+    set(red: true)
+  end
+
+  def orange!
+    set(orange: true)
+  end
+
+  def green!
+    set(green: true)
   end
 
 end
@@ -48,7 +57,7 @@ class Server < Sinatra::Base
     red =    parse_param_state params['red']
     orange = parse_param_state params['orange']
     green =  parse_param_state params['green']
-    FireState.new.set(red, orange, green)
+    FireState.new.set(red: red, orange: orange, green: green)
   end
 
   def parse_param_state(param)
@@ -61,46 +70,54 @@ class Server < Sinatra::Base
   end
 end
 
-CI_URL = ENV['CI_URL'] || "http://mathieu:pyroti@ci.preplaysports.com/go/cctray.xml"
-CI_USERNAME = ENV['CI_USERNAME'] || 'mathieu'
-CI_PASSWORD = ENV['CI_PASSWORD']
-CI_PROJECT  = ENV['CI_PROJECT']  || "PPS :: tests :: tests"
+# CI_URL = ENV['CI_URL'] || "http://mathieu:pyroti@ci.preplaysports.com/go/cctray.xml"
+
+CI_REQ_HEADERS = {"Accept".freeze => "application/json".freeze}
+CI_TOKEN = ENV.fetch('CIRCLE_CI_AUTH_TOKEN')
+CI_PROJECT = ENV.fetch('CIRCLE_CI_PROJECT')
+CI_URL="https://circleci.com/api/v1/project/#{CI_PROJECT}?circle-token#{CI_TOKEN}=&limit=1"
+
+FAILURE_OUTCOMES = %w(
+  canceled
+  infrastructure_fail
+  timedout
+  failed
+)
+
+SUCCESS_OUTCOMES = %w(
+  no_tests
+  success
+)
 
 def check_ci
   puts "Getting CI status..."
-  res = HTTParty.get(CI_URL, :basic_auth => {:username => CI_USERNAME, :password => CI_PASSWORD})
+  response = HTTParty.get(CI_URL, headers: CI_REQ_HEADERS.dup)
   # puts res
-  xml = MultiXml.parse res
-  # p xml
+  builds = JSON.parse(response)
+  last_build = builds.fetch(0)
 
-  project = (xml && xml['Projects'] && xml['Projects']['Project'] || []).detect { |p| p['name'] == CI_PROJECT }
-  p project
+  #:canceled, :infrastructure_fail, :timedout, :failed, :no_tests or :success
+  outcome = last_build.fetch('outcome')
 
-  activity = project['activity']
-  last_status = project['lastBuildStatus']
-  p [activity, last_status]
+  # :retried, :canceled, :infrastructure_fail, :timedout, :not_run, :running, :failed, :queued, :scheduled, :not_running, :no_tests, :fixed, :success
+  status = last_build.fetch('status')
 
-  orange = activity != "Sleeping"
-  red = last_status != 'Success'
-  green = last_status == 'Success'
-  p [red, orange, green]
+  p outcome: outcome  #'success', 'running', 'fail
 
-  FireState.new.set(red, orange, green)
+  case
+  when status == "running" then FireState.new.orange!
+  when FAILURE_OUTCOMES.include?(outcome) then Firestate.new.red!
+  else SUCCESS_OUTCOMES.include?(outcome) then Firestate.new.green!
+  else Firestate.new.set(red: true, green: true)
+  end
 end
 
-STATES = %w(on off) #blinking
+Thread.abort_on_exception = true
 
-# Thread.new do
-#   puts "CI polling thread created."
-#
-#   loop do
-#     begin
-#       check_ci
-#       sleep(2)
-#     rescue => e
-#       p e
-#       p e.backtrace
-#     end
-#   end
-#
-# end
+Thread.new do
+  loop do
+    check_ci
+    sleep(1)
+  end
+
+end
