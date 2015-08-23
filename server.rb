@@ -70,12 +70,10 @@ class Server < Sinatra::Base
   end
 end
 
-# CI_URL = ENV['CI_URL'] || "http://mathieu:pyroti@ci.preplaysports.com/go/cctray.xml"
-
 CI_REQ_HEADERS = {"Accept".freeze => "application/json".freeze}
 CI_TOKEN = ENV.fetch('CIRCLE_CI_AUTH_TOKEN')
-CI_PROJECT = ENV.fetch('CIRCLE_CI_PROJECT')
-CI_URL="https://circleci.com/api/v1/project/#{CI_PROJECT}?circle-token#{CI_TOKEN}=&limit=1"
+PROJECT = ENV.fetch('CIRCLE_CI_PROJECT')
+CI_URL="https://circleci.com/api/v1/project/#{PROJECT}?circle-token#{CI_TOKEN}=&limit=1"
 
 FAILURE_OUTCOMES = %w(
   canceled
@@ -91,6 +89,7 @@ SUCCESS_OUTCOMES = %w(
 
 def check_ci
   puts "Getting CI status..."
+  puts CI_URL
   response = HTTParty.get(CI_URL, headers: CI_REQ_HEADERS.dup)
   # puts res
   builds = JSON.parse(response.body)
