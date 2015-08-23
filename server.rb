@@ -94,7 +94,8 @@ def check_ci
   response = HTTParty.get(CI_URL, headers: CI_REQ_HEADERS.dup)
   # puts res
   builds = JSON.parse(response.body)
-  last_build = builds.fetch(0)
+  p builds
+  last_build = builds[0]
 
   #:canceled, :infrastructure_fail, :timedout, :failed, :no_tests or :success
   outcome = last_build.fetch('outcome')
