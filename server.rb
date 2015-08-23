@@ -34,7 +34,7 @@ class Server < Sinatra::Base
   end
 
   post "/state" do
-    ap params
+    p params
     red =    parse_param_state params['red']
     orange = parse_param_state params['orange']
     green =  parse_param_state params['green']
@@ -46,7 +46,7 @@ class Server < Sinatra::Base
       orange == 'on' ? 'y': 'n',
       green == 'on' ? 'y': 'n'
     ].join('')
-    ap state
+    p state
     result = nil #send_pusher_instruction 'state', state
     "State updated ! (#{result.inspect})"
   end
@@ -99,19 +99,19 @@ def check_ci
   res = HTTParty.get(CI_URL, :basic_auth => {:username => CI_USERNAME, :password => CI_PASSWORD})
   # puts res
   xml = MultiXml.parse res
-  # ap xml
+  # p xml
 
   project = (xml && xml['Projects'] && xml['Projects']['Project'] || []).detect { |p| p['name'] == CI_PROJECT }
-  ap project
+  p project
 
   activity = project['activity']
   last_status = project['lastBuildStatus']
-  ap [activity, last_status]
+  p [activity, last_status]
 
   orange = activity != "Sleeping"
   red = last_status != 'Success'
   green = last_status == 'Success'
-  ap [red, orange, green]
+  p [red, orange, green]
 
   send_lights_state(red, orange, green)
 end
@@ -132,8 +132,8 @@ STATES = %w(on off) #blinking
 #       check_ci
 #       sleep(2)
 #     rescue => e
-#       ap e
-#       ap e.backtrace
+#       p e
+#       p e.backtrace
 #     end
 #   end
 #
