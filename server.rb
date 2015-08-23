@@ -2,13 +2,8 @@ require 'uri'
 require 'logger'
 require 'redis'
 
-REDIS_KEY = "state"
-
 # Pusher.logger = Logger.new(STDOUT)
 $redis = Redis.connect(url: ENV.fetch("REDIS_URL", ENV.fetch("REDISTOGO_URL", "redis://localhost:6379/0")))
-
-$fire_state = $redis.get(REDIS_KEY) || "010"
-$redis.set(REDIS_KEY, $fire_state)
 
 # PUSHER_URL = ENV['PUSHER_URL'] || 'http://8d1a554cc7664a43eed1:0c00881f89481c483193@api.pusherapp.com/apps/33682'
 # pusher_url = URI.parse PUSHER_URL
@@ -22,6 +17,20 @@ $redis.set(REDIS_KEY, $fire_state)
 #   secret: PUSHER_SECRET
 # })
 
+class FireState
+  REDIS_KEY = "fire_state"
+
+  DEFAULT_STATE = '101'
+
+  def get
+    $redis.get(REDIS_KEY) || DEFAULT_STATE
+  end
+
+  def set(value)
+    $redis.set(REDIS_KEY, value)
+  end
+
+end
 
 class Server < Sinatra::Base
 
@@ -30,7 +39,7 @@ class Server < Sinatra::Base
   end
 
   get "/state" do
-  	$fire_state
+  	FireState.new.get
   end
 
   post "/state" do
@@ -39,7 +48,7 @@ class Server < Sinatra::Base
     orange = parse_param_state params['orange']
     green =  parse_param_state params['green']
 
-    state = {red: red, orange: orange, green: green}
+    # state = {red: red, orange: orange, green: green}
 
     state = [
       red == 'on' ? '1': '0',
@@ -47,9 +56,7 @@ class Server < Sinatra::Base
       green == 'on' ? '1': '0'
     ].join('')
     p state
-    result = nil #send_pusher_instruction 'state', state
-    $fire_state = state
-    "State updated ! (#{result.inspect})"
+    FireState.new.set(state)
   end
 
   post "/instructions" do
