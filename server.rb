@@ -1,9 +1,14 @@
 require 'uri'
 require 'logger'
+require 'redis'
 
-$fire_state = nil
+REDIS_KEY = "state"
+
 Pusher.logger = Logger.new(STDOUT)
+$redis = Redis.connect(url: ENV.fetch("REDIS_URL", ENV.fetch("REDISTOGO_URL", "redis://localhost:6379/0")))
 
+$fire_state = $redis.get(REDIS_KEY) || "010"
+$redis.set(REDIS_KEY, $fire_state)
 
 PUSHER_URL = ENV['PUSHER_URL'] || 'http://8d1a554cc7664a43eed1:0c00881f89481c483193@api.pusherapp.com/apps/33682'
 pusher_url = URI.parse PUSHER_URL
@@ -24,6 +29,10 @@ class Server < Sinatra::Base
     "Traffic light, ready for command !"
   end
 
+  get "/state" do
+  	$fire_state
+  end
+  
   post "/state" do
     ap params
     red =    parse_param_state params['red']
@@ -81,6 +90,7 @@ def send_lights_state(red, orange, green)
   puts "Sending state #{state}"
   send_pusher_instruction('state', state)
   $fire_state = state
+  $redis.set(REDIS_KEY, $fire_state)
   puts "Done."
 end
 
