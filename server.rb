@@ -106,6 +106,7 @@ def check_ci
 
   case
   when status == "running" then FireState.new.orange!
+  when status == "not_run" then FireState.new.green!
   when FAILURE_OUTCOMES.include?(outcome) then FireState.new.red!
   when SUCCESS_OUTCOMES.include?(outcome) then FireState.new.green!
   else FireState.new.set(red: true, green: true)
@@ -115,9 +116,14 @@ end
 Thread.abort_on_exception = true
 
 Thread.new do
-  loop do
-    check_ci
-    sleep(1)
+  begin
+    loop do
+      check_ci
+      sleep(1)
+    end
+  rescue => e
+    puts(e.inspect)
+    puts(*e.backtrace)
+    abort
   end
-
 end
